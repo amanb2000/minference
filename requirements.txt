@@ -1,0 +1,33 @@
+# Certified classics
+tqdm 
+numpy
+matplotlib
+pandas
+torch
+plotly
+seaborn
+
+# "Engineering"
+fastapi
+httpx
+uvicorn
+requests
+public-ip
+jinja2
+pytz
+
+# Deep Learning
+torch
+transformers
+einops
+accelerate
+xformers
+datasets
+
+
+# Testing and debuggery
+coverage
+pdbpp
+
+# "Prompt engineering"
+openai
