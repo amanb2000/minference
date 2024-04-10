@@ -1,0 +1,7 @@
+{ 
+    "model_name": "TheBloke/Llama-2-7B-GGUF",
+    "coordinator_url": "http://localhost:7999", 
+    "host": "0.0.0.0", 
+    "max_seq_len": 3999, 
+    "batch_size": 5
+}
