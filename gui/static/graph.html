@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <title>Graph Visualization</title>
+
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+
+</head>
+<body>
+    <div class = "container mt-5">
+        <!-- nav bar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+    
+                <div class="navbar-header">
+                    <!-- <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button> -->
+                    <a class="navbar-brand" href="/">📡 LanguageGame.io</a>
+                </div>
+    
+                <div class="collapse navbar-collapse" id="navbar">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="/static/graph.html">System Graph</a>
+                        </li>
+                        <li class = "nav-item">
+                            <a class="nav-link" href="/agent_scores">Scoreboard</a>
+                        </li>
+                        <!-- Future elements can go here. Example: -->
+                        <!--
+                        <li class="nav-item">
+                            <a class="nav-link" href="path_to_new_page.html">New Page</a>
+                        </li>
+                        -->
+                    </ul>
+                </div>
+    
+    
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+        </nav>
+    </div>
+    <div class = "container mt-5">
+        <h2>System Graph</h2>
+
+        <svg width="500" height="500"></svg>
+        <!-- <svg id="mySVG"></svg> -->
+
+        <p>
+            This page visualizes the node connectivity between LLM node(s) and agent(s). 
+        </p>
+
+        <p>
+            <b>Legend:</b>
+            <ul>
+                <li>
+                    <b>LLM node:</b> Purple
+                </li>
+                <li>
+                    <b>Agent (ready):</b> Blue
+                </li>
+                <li>
+                    <b>Agent (exchanging):</b> Orange
+                </li>
+                <li>
+                    <b>Agent (registered error):</b> Red
+                </li>
+                <li>
+                    <b>Agent (unknown error):</b> Black
+                </li>
+            </ul>
+        </p>
+    </div>
+    <script>
+        d3.json("http://dev.languagegame.io:7999/status").then(data => {
+            let nodes = [];
+            let links = [];
+
+            data.inference_servers.forEach(server => {
+                nodes.push({ id: server.uid, group: 'llm' });
+            });
+
+            data.agent_servers.forEach(agent => {
+                if (data.agent_status[agent.uid] == 'Ready'){
+                    nodes.push({ id: agent.uid, group: 'agent (ready)' });
+                }
+                else if (data.agent_status[agent.uid] == 'Exchanging'){
+                    nodes.push({ id: agent.uid, group: 'agent (exchanging)' });
+                }
+                else {
+                    nodes.push({ id: agent.uid, group: 'agent (error)' });
+                }
+
+
+                // Assuming every agent has one llm inference server linked to it
+                links.push({
+                    source: agent.uid,
+                    target: agent.inference_server.uid
+                });
+
+                // Adding the links between agents (if any)
+                for(i = 0; i < agent.neighbors.length; i++){
+                    links.push({
+                        source: agent.uid, 
+                        target: agent.neighbors[i].uid
+                    })
+                }
+            });
+
+            console.log("LINKS: ", links)
+
+            let svg = d3.select("svg"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
+
+            let pull_strength = -2000
+            console.log("Length of nodes: " + nodes.length)
+            if (nodes.length > 20) { 
+                pull_strength = -200
+            }
+            else {
+                let pull_strength = -2000
+            }
+
+            let simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id))
+                .force("charge", d3.forceManyBody().strength(pull_strength))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+            
+            simulation.force("link").links(links);
+
+
+            let link = svg.append("g")
+                .selectAll("line")
+                .data(links)
+                .enter().append("line")
+                .attr("stroke-width", 2)
+                .attr("stroke", "#aaa");  // Added this;
+
+            let node = svg.append("g")
+                .selectAll("circle")
+                .data(nodes)
+                .enter().append("circle")
+                .attr("r", 5)
+                // .attr("fill", d => d.group === 'llm' ? 'red' : 'blue')
+                .attr("fill", d => {
+                    if (d.group === 'llm') {
+                        return 'purple';
+                    } else if (d.group === 'agent (ready)') {
+                        return 'blue';
+                    } else if (d.group === 'agent (exchanging)') {
+                        return 'orange';
+                    } else if (d.group === 'agent (error)') {
+                        return 'red';
+                    } else {
+                        return 'black'; // default color
+                    }
+                })
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+            
+                let labels = svg.append("g")
+                    .selectAll("text")
+                    .data(nodes)
+                    .enter().append("text")
+                    .text(d => d.id)
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y)
+                    .attr("text-anchor", "middle")
+                    .attr("dy", "1.0em")
+                    .attr("font-size", "10px");
+
+
+
+
+            node.append("title").text(d => d.id);
+
+            simulation.nodes(nodes).on("tick", ticked);
+            simulation.force("link").links(links);
+
+            function ticked() {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+
+                labels
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+            }
+
+            function dragstarted(d) {
+                if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        });
+    </script>
+</body>
+</html>

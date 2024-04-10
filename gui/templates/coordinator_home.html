@@ -1,0 +1,138 @@
+<!-- ... --> 
+<!-- Inference Servers table -->
+<div>
+    <!-- if data.status is "Ready to Start Game", we will render a big green ready sign -->
+    {% if data.status == "Ready to Start Game" %}
+        <h1 class="text-success">Ready to Start Game</h1>
+    {% elif data.status.startswith('Uninitialized Topology') %}
+        <h1 class="text-warn">Uninitialized Topology</h1>
+    {% elif data.status.startswith('Running Game') %}
+        <h1 class="text-info">{{ data.status }}</h1>
+    {% elif data.status.startswith('Error') %}
+        <h1 class="text-danger">Error</h1>
+    {% elif data.status.startswith('Mutating Agents') %}
+        <h1 class="text-warning">{{ data.status }}</h1>
+    {% else %}
+        <h1 class="text-danger">Unknown Status</h1>
+    {% endif %}
+
+
+
+    {% if data.status == "Uninitialized Topology" %}
+    <h3 class = "mt-5">Coordinator Node</h3>
+    <p>Use this button to add neighbors (no-op if neighbors already have been assigned)</p>
+    <form hx-post="/gui_initialize_game" hx-trigger="click" hx-target="#initResponse" hx-indicator="#initLoadingIndicator">
+        <button type="submit">Initialize Game</button>
+    </form>
+    <div id="initResponse"></div>
+    <div id="initLoadingIndicator" style="display:none;">Initializing...</div>
+    {% endif %}
+
+    {% if data.status == "Ready to Start Game" %}
+    <p>Use this button to run an iterated language game.</p>
+    <form method="get" hx-get="/gui_run_game" hx-params="*"="click" hx-target="#response" hx-indicator="#loadingIndicator">
+        <!-- # hx-get="https://yourserver.com/endpoint" hx-params="*" -->
+        <input type="number" name="num_iters" placeholder="Number of iterations (e.g., 100)" required>
+        <input type="number" name="generation_period" placeholder="Generation period (e.g., 10)" required>
+        <input type="number" step="any" name="death_fraction" placeholder="Death fraction (e.g., .4)" required>
+        <button type="submit">Run Iterated Game</button>
+    </form>
+    {% endif %}
+    
+    <div id="response">
+        <!-- This is where the response will be shown -->
+    </div>
+    
+    <div id="loadingIndicator" style="display:none">
+        <!-- This will be shown when the request is in progress. You can add some spinner or message here -->
+        Loading...
+    </div>
+
+    <div id="response"></div>
+
+    <h3>Inference Servers</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>UID</th>
+                <th>IP Address</th>
+                <th>Port</th>
+                <th>Name</th>
+                <th>Max Seq. Length</th>
+                <th>Batch Size</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for server in data.inference_servers %}
+                <tr>
+                    <td>{{ server.uid }}</td>
+                    <td>{{ server.ip_address }}</td>
+                    <td>{{ server.port }}</td>
+                    <td>{{ server.llm_name }}</td>
+                    <td>{{ server.max_seq_len }}</td>
+                    <td>{{ server.batch_size }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Agent Servers table -->
+    <!-- Agent Servers -->
+    <h3 class="mt-5">Agent Servers</h3>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>UID</th>
+                <th>IP Address</th>
+                <th>Port</th>
+                <th>Status</th>
+                <th>Neighbors</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for agent in data.agent_servers %}
+                <tr>
+                    <td><a href="/agent/{{ agent.uid }}">{{ agent.uid }}</a></td>
+                    <td>{{ agent.ip_address }}</td>
+                    <td>{{ agent.port }}</td>
+                    <!-- <td>{{ data.agent_status[agent.uid] }}</td> -->
+                    <td class="{% if data.agent_status[agent.uid] == 'Ready' %}bg-success{% elif data.agent_status[agent.uid] == 'Exchanging' %}bg-warning{% elif data.agent_status[agent.uid] == 'Error' %}bg-danger{% endif %}">
+                        {{ data.agent_status[agent.uid] }}
+                    </td>
+                    <td>
+                        <ul>
+                            {% for neighbor in agent.neighbors %}
+                                <li>{{ neighbor.uid }} ({{ neighbor.ip_address }}:{{ neighbor.port }})</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    
+
+
+    <h4 class="mt-5">Action Log</h4>
+    <ul class="list-group">
+        {% for action in data.action_log %}
+            <li class="list-group-item">
+                [{{ action.action }}] - 
+                <span class="toggle-action" data-toggle="collapse" data-target="#action{{ loop.index }}">...</span>
+                <div id="action{{ loop.index }}" class="collapse">
+                    {{ action|tojson }}
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <script>
+            function updateActionUrl(formElement) {
+                const numItersValue = formElement.querySelector("[name='num_iters']").value;
+                const generationPeriod = formElement.querySelector("[name='generation_period']").value;
+                const deathFraction = formElement.querySelector("[name='death_fraction']").value;
+                formElement.action = `/gui_run_game?num_iters=${numItersValue}&generation_period=${generationPeriod}&death_fraction=${deathFraction}`;
+            }
+    </script>
+</div>

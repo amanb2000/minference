@@ -1,0 +1,5 @@
+<ul>
+    {% for message in chat_data %}
+        <li><b>[{{ message.sender }}]</b>: {{ message.message }}</li>
+    {% endfor %}
+</ul>

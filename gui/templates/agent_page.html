@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ agent.uid }}</title>
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+</head>
+<body>
+<div class = "container mt-5">
+    <!-- nav bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+
+            <div class="navbar-header">
+                <!-- <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button> -->
+                <a class="navbar-brand" href="/">📡 LanguageGame.io</a>
+            </div>
+
+            <div class="collapse navbar-collapse" id="navbar">
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/static/graph.html">System Graph</a>
+                    </li>
+                    <li class = "nav-item">
+                        <a class="nav-link" href="/agent_scores">Scoreboard</a>
+                    </li>
+                    <!-- <li class = "nav-item">
+                        <a class="nav-link active" aria-current="page" href="/agent/{{ agent.uid }}">Agent {{ agent.uid }}</a>
+                    </li> -->
+                    <!-- Future elements can go here. Example: -->
+                    <!--
+                    <li class="nav-item">
+                        <a class="nav-link" href="path_to_new_page.html">New Page</a>
+                    </li>
+                    -->
+                </ul>
+            </div>
+
+
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <h1>Agent {{ agent.uid }}</h1>
+    <!-- Basic agent details -->
+    <p>Status: {{ agent.status }}</p>
+    <p>IP Address: {{ agent.ip_addr }}</p>
+    <p>Port: {{ agent.port }}</p>
+    <p>System Prompt: {{ agent.system_prompt }}</p>
+    
+    <!-- Neighbors -->
+    <h2>Neighbors</h2>
+    <ul>
+        {% for neighbor in agent.neighbors %}
+            <li>UID: <a href="/agent/{{ neighbor.uid }}">{{ neighbor.uid }}</a>, IP Address: {{ neighbor.ip_address }}, Port: {{ neighbor.port }}, Go First: {{ neighbor.go_first }}</li>
+        {% endfor %}
+    </ul>
+    
+    <!-- LLM inference node -->
+    <h2>LLM Inference Node</h2>
+    <p>UID: {{ agent.llm_inference_node.uid }}</p>
+    <!-- ... add other properties ... -->
+   
+    
+
+    <h2>Chat Viewer</h2>
+    <select id="chatAgentDropdown" hx-trigger="change" hx-target="#chatLogDisplay" name="chat_agent">
+        {% for uid in agent.chat_log.keys() %}
+            <option value="{{ uid }}">{{ uid }}</option>
+        {% endfor %}
+    </select>
+
+    <select id="chatTypeDropdown" hx-trigger="change" hx-target="#chatLogDisplay" name="chat_type">
+        <option value="chat_log">Chat Log</option>
+        <option value="chat_archive">Chat Archive</option>
+    </select>
+
+    <!-- button for "get log"-->
+    <button id="getLogButton" hx-trigger="change" hx-target="#chatLogDisplay">Get Log</button>
+
+    <div id="chatLogDisplay">
+        <!-- This section will be populated by HTMX based on the dropdown selection -->
+    </div>
+
+
+    <h2>Corpus/Context Log</h2>
+    <ol>
+        {% for chunk in agent.corpus_log %}
+        <li>
+            {{ chunk }}
+        </li>
+        {% endfor %}
+    </ol>
+
+    <h2 class="mt-5">Action Log</h2>
+    <ul class="list-group">
+        {% for action in agent.action_log %}
+            <li class="list-group-item">
+                [{{ action.action }}] - 
+                <span class="toggle-action" data-toggle="collapse" data-target="#action{{ loop.index }}">[Expand]</span>
+                <div id="action{{ loop.index }}" class="collapse">
+                    {{ action|tojson }}
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        // Update the hx-get attribute dynamically based on the dropdown selection
+        document.getElementById('chatAgentDropdown').addEventListener('change', updateHxGet);
+        document.getElementById('chatTypeDropdown').addEventListener('change', updateHxGet);
+
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // async function updateHxGet() {
+        async function updateHxGet() {
+            var selectedReceiverUID = document.getElementById('chatAgentDropdown').value;
+            console.log("Current value of chatAgentDropdown: ", selectedReceiverUID)
+            // sleep for 0.2 seconds
+            // await sleep(200);
+
+
+            var chatType = document.getElementById('chatTypeDropdown').value;
+            var hxGetURL = `/agent/{{ agent.uid }}/chat_data/${selectedReceiverUID}?chat_type=${chatType}`;
+
+            // perform the get request 
+            await htmx.ajax('GET', hxGetURL, '#chatLogDisplay', {target: '#chatLogDisplay'});
+        }
+        
+        // Call the function once initially to set the correct hx-get
+        updateHxGet();
+    </script>
+</div>
+</body>
+</html>
