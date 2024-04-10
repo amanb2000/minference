@@ -1,6 +1,6 @@
 { 
     "model_name": "TheBloke/CapybaraHermes-2.5-Mistral-7B-GPTQ",
-    "coordinator_url": "http://localhost:7999", 
+    "coordinator_url": "None", 
     "host": "0.0.0.0", 
     "max_seq_len": 3999, 
     "batch_size": 5
