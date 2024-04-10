@@ -1,0 +1,6 @@
+{
+    "num_messages_per_iteration": 7,
+    "num_messages_retained": 2, 
+    "coordinator_url": "http://lancelot.languagegame.io:8000",
+    "host": "0.0.0.0"
+}

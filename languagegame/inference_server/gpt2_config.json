@@ -1,0 +1,7 @@
+{ 
+    "model_name": "gpt2",
+    "coordinator_url": "http://localhost:7999", 
+    "host": "0.0.0.0", 
+    "max_seq_len": 1024, 
+    "batch_size": 5
+}
