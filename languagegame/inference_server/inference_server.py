@@ -148,6 +148,10 @@ class InferenceServer:
         InferenceServerModel object in response with our new UID (we should
         set this)
         """
+        if self.coordinator_url == "None":
+            print("No coordinator URL provided. Skipping registration.")
+            return
+
         print("Registering with the coordinator at ", self.coordinator_url)
         response = requests.post(self.coordinator_url + "/register_inference_server", json=self.get_self_model().model_dump())
         if response.status_code == 200:
@@ -164,6 +168,9 @@ class InferenceServer:
     def unregister_from_coordinator(self): 
         """ Unregister from the coordinator. 
         """
+        if self.coordinator_url == "None":
+            print("[OK] No coordinator URL provided. Skipping unregistration.")
+            return
         print("Unregistering from the coordinator at ", self.coordinator_url)
         response = requests.post(self.coordinator_url + "/unregister_inference_server", json=self.get_self_model().model_dump())
         if response.status_code == 200:
