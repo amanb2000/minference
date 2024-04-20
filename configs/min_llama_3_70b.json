@@ -1,0 +1,7 @@
+{ 
+    "model_name": "meta-llama/Meta-Llama-3-70B",
+    "coordinator_url": "None", 
+    "host": "0.0.0.0", 
+    "max_seq_len": 8000, 
+    "batch_size": 1 
+}
