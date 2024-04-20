@@ -5,6 +5,7 @@ import requests
 import threading
 import queue
 
+from fastapi import HTTPException
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import public_ip as ip
@@ -118,7 +119,8 @@ class InferenceServer:
 
 
         # Now let's add any token with '[' or ']' in it
-        illegal_chars = ['[', ']', '(', ')', 'agent', 'agents', 'Agent', 'AGENT', 'FAILURE', 'failure', ':', '\\n', 'concourse', '/r/', '<', '>', '"', "'"]
+        # illegal_chars = ['[', ']', '(', ')', 'agent', 'agents', 'Agent', 'AGENT', 'FAILURE', 'failure', ':', '\\n', 'concourse', '/r/', '<', '>', '"', "'"]
+        illegal_chars = []
         for i in range(self.tokenizer.vocab_size): 
             i_str = self.tokenizer.decode([i])
             for char in illegal_chars:
@@ -305,10 +307,11 @@ class InferenceServer:
         print("Done storing request in the request queue. Now waiting for the request to be processed by the worker thread...")
         
         # Wait for the request to be processed
-        processed = request_item.event.wait(30)
+        processed = request_item.event.wait(3000)
 
         if not processed: 
-            raise Exception(status_code=408, detail="Request timed out")
+            raise HTTPException(status_code=408, detail="Request timed out")
+
 
         print("Request processed by the worker thread! Returning results to client.")
         return request_item.result
@@ -359,7 +362,7 @@ class InferenceServer:
                                                         no_repeat_ngram_size=2,  # To ensure more diversity in the generated text
 
                                                         do_sample=True,
-                                                        # top_k=10,
+                                                        top_k=10,
                                                         temperature=0.8,
 
                                                         attention_mask=attention_mask,
