@@ -105,8 +105,15 @@ class InferenceServer:
             "( me )", 
             "(me):",
             "[CURRENT DISCUSSION",
-            "agent"
-            "RECENT DISCUSSION"
+            "agent",
+            "RECENT DISCUSSION", 
+            "\nAssistant: ", 
+            f"\nAssistant: ", 
+            "Assistant: ", 
+            "Assistant",
+            "\n", 
+            f"\n", 
+            ":",
         ]
 
         # add all versions of blacklisted phrases with a leading space
@@ -119,8 +126,8 @@ class InferenceServer:
 
 
         # Now let's add any token with '[' or ']' in it
-        # illegal_chars = ['[', ']', '(', ')', 'agent', 'agents', 'Agent', 'AGENT', 'FAILURE', 'failure', ':', '\\n', 'concourse', '/r/', '<', '>', '"', "'"]
-        illegal_chars = []
+        illegal_chars = ['[', ']', '(', ')', 'agent', 'agents', 'Agent', 'AGENT', 'FAILURE', 'failure', ':', '\\n', 'concourse', '/r/', '<', '>', '"', "'", "\n", f"\n"]
+        # illegal_chars = []
         for i in range(self.tokenizer.vocab_size): 
             i_str = self.tokenizer.decode([i])
             for char in illegal_chars:

@@ -39,6 +39,6 @@ if __name__ == "__main__":
         result = inference_call(req, args.api_url, num_tok)
         if result:
             print("\n\n")
-            print("input_string (Request):", result["input_string"])
+            # print("input_string (Request):", result["input_string"])
             print("\n\nGenerated Text:", result["generated"])
-            print("\nNum truncated: ", result["num_truncated"])
+            # print("\nNum truncated: ", result["num_truncated"])
