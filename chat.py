@@ -4,6 +4,8 @@ import json
 import argparse
 from datetime import datetime
 from languagegame.models import GenRequest
+# line width 80 pretty printing 
+import textwrap
 
 def inference_call(req: GenRequest, API_URL, num_tokens=50):
     response = requests.post(API_URL, json=req.model_dump())
@@ -19,8 +21,14 @@ def load_system_prompt(file_path):
         return file.read().strip()
 
 def save_chat(chat_history, file_path):
+    # with open(file_path, "w") as file:
+    #     file.write("\n".join(chat_history))
+    """ use one line per list element (string beginning with "User: " or "Assistant: ")
+    """
     with open(file_path, "w") as file:
-        file.write("\n".join(chat_history))
+        for line in chat_history:
+            file.write(line + f"\n")
+        
 
 def load_chat(file_path):
     if os.path.exists(file_path):
@@ -51,11 +59,17 @@ def main(args):
         user_input = input("User: ")
         if user_input.lower() == "quit":
             break
+        elif user_input.lower() == "refresh": 
+            # print entire chat history
+            print("\n----------------------------------------------------------------------------------------------------".join(chat_history))
         elif user_input.lower() == "list":
             chat_files = list_chat_files(chat_dir)
             print("Available chat files:")
             for file in chat_files:
                 print(f"- {file}")
+            continue
+        elif user_input.lower() == "whoami": 
+            print("You are the user in chat ", chat_file, "\n")
             continue
         elif user_input.lower().startswith("load"):
             file_name = user_input.split(" ")[1]
@@ -71,26 +85,39 @@ def main(args):
 
         req = GenRequest(
             system_prompt=system_prompt,
-            input_string=input_string,
+            input_string=input_string+f"\nAssistant: ",
             num_tokens=args.num_tokens
         )
 
         result = inference_call(req, args.api_url, args.num_tokens)
         if result:
             generated_text = result["generated"]
+            generated_text = " ".join(generated_text.split("\n"))
+            generated_text = textwrap.fill(generated_text, width=80)
+
             chat_history.append(f"Assistant: {generated_text}")
             save_chat(chat_history, chat_file)
             print(f"\n\n--------------------------------------------------------------------------------\nAssistant: {generated_text}")
 
+        user_input = input(f"")
         while user_input == "":
-            req.num_tokens += args.num_tokens
+            req.num_tokens = args.num_tokens
+            # get the current chat history 
+            input_string = "\n".join(chat_history)
+            req.input_string = input_string
             result = inference_call(req, args.api_url, args.num_tokens)
+            # print("request: ", req.model_dump())
             if result:
                 generated_text = result["generated"]
-                chat_history[-1] = f"Assistant: {generated_text}"
+                # remove newlines, replace with spaces, set linewidth 80 
+                generated_text = " ".join(generated_text.split("\n"))
+                generated_text = textwrap.fill(generated_text, width=80)
+
+                chat_history[-1] += generated_text
                 save_chat(chat_history, chat_file)
                 print(generated_text, end="", flush=True)
-            user_input = input()
+            user_input = input("")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
