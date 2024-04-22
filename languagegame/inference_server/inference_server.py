@@ -306,8 +306,8 @@ class InferenceServer:
             self.cond_var.notify()
         print("Done storing request in the request queue. Now waiting for the request to be processed by the worker thread...")
         
-        # Wait for the request to be processed
-        processed = request_item.event.wait(3000)
+        # Wait for the request to be processed (5min)
+        processed = request_item.event.wait(300)
 
         if not processed: 
             raise HTTPException(status_code=408, detail="Request timed out")
@@ -359,12 +359,11 @@ class InferenceServer:
                                                         max_length=batch_ids.shape[1] + num_tokens, 
                                                         # CONTRASTIVE DECODING -- Didn't work that well for GPT-2 #
                                                         # penalty_alpha=0.6, top_k=4, # contrastive decoding
-                                                        no_repeat_ngram_size=2,  # To ensure more diversity in the generated text
-
+                                                        no_repeat_ngram_size=3,  # To ensure more diversity in the generated text
                                                         do_sample=True,
-                                                        top_k=10,
+                                                        top_p = 0.95, 
+                                                        top_k = 100,
                                                         temperature=0.8,
-
                                                         attention_mask=attention_mask,
                                                         bad_words_ids=self.bad_word_ids  # Blacklist phrases
                                                         ).to(self.device)
