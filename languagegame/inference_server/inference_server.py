@@ -38,7 +38,8 @@ class InferenceServer:
                  coordinator_url: str = "http://lancelot.languagegame.io:8000", 
                  host: str = "0.0.0.0", 
                  max_seq_len:int=-1, 
-                 batch_size:int = 1):
+                 batch_size:int = 1, 
+                 do_sample:bool = True):
         # Loading the model and tokenizer
         if model_name is None or model_name == "None": 
             self.model_name = "None"
@@ -55,6 +56,10 @@ class InferenceServer:
 
             # Moving model to appropriate device
             self.model.eval()
+
+            self.do_sample = do_sample
+            if not do_sample: 
+                print("WARNING: do sample is FALSE, will do GREEDY DECODING")
 
             # run in float16
             # self.model = self.model.to(torch.bfloat16)
@@ -367,7 +372,7 @@ class InferenceServer:
                                                         # CONTRASTIVE DECODING -- Didn't work that well for GPT-2 #
                                                         # penalty_alpha=0.6, top_k=4, # contrastive decoding
                                                         no_repeat_ngram_size=3,  # To ensure more diversity in the generated text
-                                                        do_sample=True,
+                                                        do_sample=self.do_sample,
                                                         top_p = 0.95, 
                                                         top_k = 100,
                                                         temperature=0.8,

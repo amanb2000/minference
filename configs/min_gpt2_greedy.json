@@ -1,0 +1,8 @@
+{ 
+    "model_name": "gpt2",
+    "coordinator_url": "None", 
+    "host": "0.0.0.0", 
+    "max_seq_len": 3999, 
+    "batch_size": 5, 
+	"do_sample": false 
+}

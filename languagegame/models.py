@@ -16,6 +16,7 @@ class GenRequest(BaseModel):
     input_string: str
     num_tokens: int = 50
     system_prompt: str = ""
+    greedy: bool = False
 
 class GenResponse(BaseModel): 
     input_string: str 
