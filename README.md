@@ -14,12 +14,16 @@ python3 -m venv venv
 # activate 
 source venv/bin/activate
 
-# installing the LanguageGame package and dependencies
-pip install -e .
+# install dependencies
 pip install -r requirements.txt
 ```
 
 ## Run an Inference Server
+
+Runs a batched inference server with `generate/` and `ce_loss` endpoints. 
+See `configs/` folder for example configs for adjusting `batch_size`, 
+`coordinator_url`, `max_seq_len`, and HuggingFace `model_name`. 
+
 ```bash
 # inference server, no coordinator, gpt-2
 # localhost:4444/docs for docs 
@@ -28,7 +32,8 @@ python3 languagegame/inference_server/main.py \
 	--port 4444
 
 
-# Llama-3 70b Instruct (swap out name for 8b)
+# Llama-3 70b Instruct (for 8b, swap out config for min_llama_3_8b_instruct.json)
+# No coordinator node. 
 python3 languagegame/inference_server/main.py \
 	--config configs/min_llama_3_70b_instruct.json \
 	--port 4444
