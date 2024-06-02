@@ -48,6 +48,7 @@ class InferenceServer:
             print(f"Loading model and tokenizer `{model_name}` for the InferenceServer class...")
             self.model_name = model_name
             self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto')
+            self.model.half()
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, 
                                                         add_bos_token=False, 
                                                         add_eos_token=False)
@@ -375,7 +376,7 @@ class InferenceServer:
                                                         do_sample=self.do_sample,
                                                         top_p = 0.95, 
                                                         top_k = 100,
-                                                        temperature=0.8,
+                                                        temperature=0.6,
                                                         attention_mask=attention_mask,
                                                         bad_words_ids=self.bad_word_ids  # Blacklist phrases
                                                         ).to(self.device)
