@@ -99,8 +99,9 @@ def main(args):
             save_chat(chat_history, chat_file)
             print(f"\n\n--------------------------------------------------------------------------------\nAssistant: {generated_text}")
 
-        user_input = input(f"")
-        while user_input == "":
+        if not args.auto: 
+            user_input = input(f"")
+        while (user_input == "" and not args.auto) or args.auto:
             req.num_tokens = args.num_tokens
             # get the current chat history 
             input_string = "\n".join(chat_history)
@@ -116,7 +117,8 @@ def main(args):
                 chat_history[-1] += generated_text
                 save_chat(chat_history, chat_file)
                 print(generated_text, end="", flush=True)
-            user_input = input("")
+            if not args.auto: 
+                user_input = input("")
 
 
 if __name__ == "__main__":
@@ -125,5 +127,7 @@ if __name__ == "__main__":
                         help="URL of the inference API to test. Default is http://localhost:4444/generate")
     parser.add_argument("--num_tokens", type=int, default=50,
                         help="Number of tokens to generate. Default is 50")
+    parser.add_argument("--auto", action="store_true", 
+                        help="Include this flag to automatically continue generating `num_tokens` per generation request until the model's output contains the string '<stop>'. Default=False")
     args = parser.parse_args()
     main(args)
