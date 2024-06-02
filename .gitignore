@@ -4,3 +4,4 @@
 venv
 languagegame.egg-info
 __pycache__
+chat/*.log
