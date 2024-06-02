@@ -1,5 +1,5 @@
 { 
-    "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "model_name": "meta-llama/Meta-Llama-3-70B-Instruct",
     "coordinator_url": "None", 
     "host": "0.0.0.0", 
     "max_seq_len": 8000, 
