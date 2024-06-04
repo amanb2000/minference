@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import public_ip as ip
+import pdb
 
 from languagegame.models import GenRequest, LossRequest, InferenceServerModel, GenResponse
 from languagegame import compute_score
@@ -128,7 +129,9 @@ class InferenceServer:
         self.blacklisted_phrases += [phrase + " " for phrase in self.blacklisted_phrases]
 
 
-        self.bad_word_ids = [self.tokenizer.encode(phrase) for phrase in self.blacklisted_phrases]
+        self.bad_word_ids = [self.tokenizer.encode(phrase, add_special_tokens=False) for phrase in self.blacklisted_phrases]
+        self.bad_word_ids.append([self.tokenizer.pad_token_id])
+        self.bad_word_ids.append([self.tokenizer.eos_token_id])
 
 
         # Now let's add any token with '[' or ']' in it
@@ -370,6 +373,7 @@ class InferenceServer:
                 with torch.no_grad():
                     generated_ids = self.model.generate(batch_ids, 
                                                         max_length=batch_ids.shape[1] + num_tokens, 
+                                                        min_new_tokens=num_tokens,
                                                         # CONTRASTIVE DECODING -- Didn't work that well for GPT-2 #
                                                         # penalty_alpha=0.6, top_k=4, # contrastive decoding
                                                         no_repeat_ngram_size=3,  # To ensure more diversity in the generated text
@@ -378,7 +382,7 @@ class InferenceServer:
                                                         top_k = 100,
                                                         temperature=0.6,
                                                         attention_mask=attention_mask,
-                                                        bad_words_ids=self.bad_word_ids  # Blacklist phrases
+                                                        bad_words_ids=self.bad_word_ids,  # Blacklist phrases
                                                         ).to(self.device)
 
             # select only the text after the initial input string
