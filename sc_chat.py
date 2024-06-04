@@ -4,6 +4,14 @@ LLM APIs.
 
 Saves the transcripts to a folder chat/ in the current directory, 
 unless otherwise specified. 
+
+Usage:
+    python sc_chat.py --api_url <api_url> --num_tokens <num_tokens> --auto
+
+    api_url: URL of the inference API to test. Default is http://control.languagegame.io/colossus/generate, which I am freely hosting llama-3 70b instruct as a test. 
+    num_tokens: Number of tokens to generate per inference call. Default is 20.
+    auto: Include this flag to automatically continue generating `num_tokens` more assistant responses for the rest of time. Default=False
+
 """
 
 from pydantic import BaseModel
