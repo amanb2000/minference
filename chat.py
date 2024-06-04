@@ -4,6 +4,7 @@ import json
 import argparse
 from datetime import datetime
 from languagegame.models import GenRequest
+import pdb
 # line width 80 pretty printing 
 import textwrap
 
@@ -98,27 +99,35 @@ def main(args):
             chat_history.append(f"Assistant: {generated_text}")
             save_chat(chat_history, chat_file)
             print(f"\n\n--------------------------------------------------------------------------------\nAssistant: {generated_text}")
+        else: 
+            print("ERROR in results: ", result) 
 
         if not args.auto: 
             user_input = input(f"")
-        while (user_input == "" and not args.auto) or args.auto:
+        while args.auto or (user_input == "" and not args.auto):
             req.num_tokens = args.num_tokens
             # get the current chat history 
             input_string = "\n".join(chat_history)
             req.input_string = input_string
+            # print("\n[Sending inference call]")
             result = inference_call(req, args.api_url, args.num_tokens)
+            # print("\n[Received inference call result]")
+            # print("\t",result)
             # print("request: ", req.model_dump())
             if result:
                 generated_text = result["generated"]
                 # remove newlines, replace with spaces, set linewidth 80 
                 generated_text = " ".join(generated_text.split("\n"))
-                generated_text = textwrap.fill(generated_text, width=80)
+                # generated_text = textwrap.fill(generated_text, width=80)
 
                 chat_history[-1] += generated_text
                 save_chat(chat_history, chat_file)
                 print(generated_text, end="", flush=True)
+            else: 
+                print("ERROR IN GETTING RESULT FROM INFERENCE CALL: ", result)
             if not args.auto: 
                 user_input = input("")
+
 
 
 if __name__ == "__main__":
