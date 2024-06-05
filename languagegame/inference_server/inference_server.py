@@ -391,7 +391,7 @@ class InferenceServer:
             # Decode the generated ids to string
             responses = []
             for i in range(generated_ids.shape[0]):
-                generated_text = self.tokenizer.decode(generated_ids[0, :], skip_special_tokens=True)
+                generated_text = self.tokenizer.decode(generated_ids[i, :], skip_special_tokens=True)
                 input_string = self.tokenizer.decode(batch_ids[i, :], skip_special_tokens=True)
 
                 generated_response = GenResponse(
