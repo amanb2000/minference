@@ -378,8 +378,7 @@ class InferenceServer:
                                                         # penalty_alpha=0.6, top_k=4, # contrastive decoding
                                                         no_repeat_ngram_size=3,  # To ensure more diversity in the generated text
                                                         do_sample=self.do_sample,
-                                                        top_p = 0.95, 
-                                                        top_k = 100,
+                                                        top_p = 0.3, 
                                                         temperature=0.6,
                                                         attention_mask=attention_mask,
                                                         bad_words_ids=self.bad_word_ids,  # Blacklist phrases
