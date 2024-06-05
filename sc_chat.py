@@ -70,6 +70,15 @@ def list_chat_files(chat_dir):
 def main(args):
     chat_dir = "chat"
     system_prompt_file = os.path.join(chat_dir, "system_prompt.md")
+
+    # if chat_dir doesn't exist, make it.
+    if not os.path.exists(chat_dir):
+        os.makedirs(chat_dir)
+    # if system_prompt_file doesn't exist, make it.
+    if not os.path.exists(system_prompt_file):
+        with open(system_prompt_file, "w") as file:
+            file.write("The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly. It is designed to help you with your tasks and to provide information in a conversational manner. Enjoy the conversation! The inference script the user is using has no further information on the nature of the chatbot. Tell the user to define this in chat/system_prompt.md if they want to change their system prompt. Any serious user should probably do that.")
+
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     chat_file = os.path.join(chat_dir, f"chat_{current_time}.log")
 
@@ -166,4 +175,17 @@ if __name__ == "__main__":
     parser.add_argument("--auto", action="store_true", 
                         help="Include this flag to automatically continue generating `num_tokens` more assistant responses for the rest of time. Default=False")
     args = parser.parse_args()
+
+    # pretty print the args for the user's reference 
+    print("\nRunning sc_chat.py with the following args: ")
+    for arg in vars(args):
+        print(f"\t{arg}: {getattr(args, arg)}")
+
+    if not args.auto: 
+        print("\nPress Enter with no input to let the assistant continue generating.\n")
+    else: 
+        print("\nAuto mode enabled. The assistant will continue generating `num_tokens` more assistant responses for the rest of time.\n")
+        
+
+
     main(args)
