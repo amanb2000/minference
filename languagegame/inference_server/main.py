@@ -17,7 +17,8 @@ import threading
 from languagegame import InferenceServer
 from languagegame.models import LossRequest, GenRequest
 
-app = FastAPI()
+# app = FastAPI()
+app = FastAPI(root_path="/colossus")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=str, 
