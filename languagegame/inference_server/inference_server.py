@@ -40,6 +40,7 @@ class InferenceServer:
                  host: str = "0.0.0.0", 
                  max_seq_len:int=-1, 
                  batch_size:int = 1, 
+                 ce_batch_size:int = 100,
                  do_sample:bool = True):
         # Loading the model and tokenizer
         if model_name is None or model_name == "None": 
@@ -53,6 +54,8 @@ class InferenceServer:
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, 
                                                         add_bos_token=False, 
                                                         add_eos_token=False)
+            # add special tokens set to false 
+            self.tokenizer.add_special_tokens = False
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
 
@@ -89,6 +92,7 @@ class InferenceServer:
 
 
         self.batch_size = batch_size
+        self.ce_batch_size = ce_batch_size
 
         # Registering with the coordinator
         self.register_with_coordinator()
@@ -196,7 +200,100 @@ class InferenceServer:
         else:
             raise Exception("Failed to unregister from the coordinator. Response = {}".format(response.json()))
 
+    def batch_compute_loss(self, batch): 
+        """
+        Given a list of RequestItems (where each RequestItem contains a LossRequest), 
+        compute the loss for each request and return the result for each request in 
+        the following format: 
+
+        batch[i].result = {
+            "initial_request": {
+                "context_string": request.context_string,
+                "corpus_string": request.corpus_string
+            },
+            "loss": loss.item()
+        }
+
+        Then do batch[i].event.set()
+        """
+        # step 1: get a list of context_ids and corpus_ids
+        context_strings = []
+        context_ids = [] # list of lists
+
+        corpus_strings = []
+        corpus_ids = [] # list of lists
+        lengths = []
+        max_len = -1
+        for req in batch: # type RequestItem 
+            assert isinstance(req, RequestItem)
+            assert isinstance(req.gen_request, LossRequest)
+            context_strings.append(req.gen_request.context_string)
+            corpus_strings.append(req.gen_request.corpus_string)
+
+            context_ids.append(self.tokenizer.encode(req.gen_request.context_string))
+            corpus_ids.append(self.tokenizer.encode(req.gen_request.corpus_string, add_special_tokens=False))
+            length = len(context_ids[-1]) + len(corpus_ids[-1])
+            lengths.append(length)
+            if length > max_len: 
+                max_len = len(context_ids[-1]) + len(corpus_ids[-1])
+
+        # step 2: pad the context strings on the left so that they all have the same length
+        for i in range(len(context_ids)):
+            if lengths[i] < max_len: 
+                context_ids[i] = [self.tokenizer.pad_token_id] * (max_len - lengths[i]) + context_ids[i]
+        # step 3: create input_ids of shape [batch_size, max_len] with [context_ids, corpus_ids] concatenated at each row 
+        # also create attention mask with zeros for pad tokens 
+        # also create label_ids with -100 for pad tokens and context_ids and corpus_ids for the rest
+        input_ids = torch.zeros((len(batch), max_len), dtype=torch.long)
+        attention_mask = torch.zeros((len(batch), max_len), dtype=torch.long)
+        labels = torch.full((len(batch), max_len), -100, dtype=torch.long)
+
+        for i, (context, corpus) in enumerate(zip(context_ids, corpus_ids)):
+            full_seq = context + corpus
+            input_ids[i, :len(full_seq)] = torch.tensor(full_seq)
+            length_no_pad = lengths[i]
+            attention_mask[i, -length_no_pad:] = 1
+            labels[i, len(context):len(full_seq)] = torch.tensor(corpus)
+
+        # step 4: compute loss
+        input_ids = input_ids.to(self.device)
+        attention_mask = attention_mask.to(self.device)
+        labels = labels.to(self.device)
+
+        with self.model_cond_var: 
+            with torch.no_grad(): 
+                outputs = self.model(input_ids=input_ids, 
+                                     attention_mask=attention_mask, 
+                                     labels=labels, 
+                                     return_dict=True,
+                                     output_attentions=False,
+                                     output_hidden_states=False)
+        # Calculate per-example loss
+        loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+        logits = outputs.logits[:, :-1, :].contiguous()
+        labels = labels[:, 1:].contiguous()
+        losses = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+        losses = losses.view(labels.shape) 
+
+        # if len(batch) > 1: 
+            # pdb.set_trace()
+
+        # step 5: set results and trigger events
+        for i, req in enumerate(batch):
+            req.result = {
+                "initial_request": {
+                    "context_string": context_strings[i],
+                    "corpus_string": corpus_strings[i]
+                },
+                "loss": losses[i, labels[i, :] != -100].mean().item()
+            }
+            req.event.set()
+
+        return losses 
+
         
+
+
     def worker_daemon(self): 
         """ The worker daemon runs in a separate thread and processes requests 
         from the generate_queue. This allows the inference server to process 
@@ -226,10 +323,14 @@ class InferenceServer:
                     print("Worker thread activated -- processing the LOSS QUEUE.")
                     # for now we will just get the next element in the loss queue 
                     # and process it with the CE loss endpoint
-                    request = self.loss_queue.get_nowait()
-                    response = self.compute_loss(request.gen_request) # Perform computation
-                    request.result = response # Store the result
-                    request.event.set() # notify the waiting endpoint thread
+                    batch = [] 
+                    print("self.ce_batch_size: ", self.ce_batch_size)
+                    while not self.loss_queue.empty() and len(batch) < self.ce_batch_size:
+                        request = self.loss_queue.get_nowait()
+                        batch.append(request)
+                    response = self.batch_compute_loss(batch) # Perform computation
+                    # request.result = response # Store the result
+                    # request.event.set() # notify the waiting endpoint thread
                     self.last_action = "Loss"
                 else: 
                     raise Exception("Invalid last action: {}".format(self.last_action))
@@ -344,7 +445,7 @@ class InferenceServer:
         print("Done storing request in the request queue. Now waiting for the request to be processed by the worker thread...")
         
         # Wait for the request to be processed
-        processed = request_item.event.wait(30)
+        processed = request_item.event.wait(60)
 
         if not processed: 
             raise Exception(status_code=408, detail="Request timed out")
