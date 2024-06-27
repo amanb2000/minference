@@ -21,13 +21,18 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_endpoint", type=str, default="http://localhost:4444/ce_loss")
 parser.add_argument("--data", type=str, default="tests/ce_data.json")
+parser.add_argument("--num_sup_iters", type=int, default=1, help="Number of iterations on the --data.")
 args = parser.parse_args()
 
 
 # Load the data:
 with open(args.data, "r") as f:
-    data = json.load(f)
+    data_ = json.load(f)
 
+data = []
+for k in range(args.num_sup_iters): 
+    for d in data_: 
+        data.append(d)
 
 # Send the requests in parallel with httpx and gather 
 # the results:
