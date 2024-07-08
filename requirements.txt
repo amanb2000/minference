@@ -21,10 +21,7 @@ torch
 transformers
 einops
 accelerate
-xformers
 datasets
-optimum
-auto-gptq
 
 # Testing and debuggery
 coverage
